@@ -465,11 +465,30 @@ void PromiseWriterHelper(const DropData& drop_data,
     }
   }
 
+  // BEGIN EXTENSIS
   // Plain text.
   if (!dropData_->text.string().empty()) {
-    [pasteboard_ addTypes:@[ NSStringPboardType ]
-                    owner:contentsView_];
+    NSString *tmp = SysUTF16ToNSString(dropData_->text.string());
+
+    NSString *kExtensisFilenamesToken = @"extensis-filenames-type:";
+    NSString *kFilenamesDelimiterToken = @"|\n|";
+
+    // If this is a special Extensis kind of text, parse it,
+    // and set a NSFilenamesPboardType pasteboard property.
+    NSRange filenameTokenLoc = [tmp rangeOfString:kExtensisFilenamesToken];
+    if (filenameTokenLoc.location != NSNotFound) {
+      NSString *filenamesStr = [tmp substringFromIndex:filenameTokenLoc.location + filenameTokenLoc.length];
+      NSArray *filenames = [filenamesStr componentsSeparatedByString:kFilenamesDelimiterToken];
+      if ([filenames count] > 0) {
+        dragOperationMask_ &= ~NSDragOperationMove;
+        [pasteboard_ setPropertyList:filenames forType:NSFilenamesPboardType];
+      }
+    } else {
+      [pasteboard_ addTypes:@[ NSStringPboardType ]
+                      owner:contentsView_];
+    }
   }
+  // END EXTENSIS
 
   if (!dropData_->custom_data.empty()) {
     [pasteboard_ addTypes:@[ ui::kWebCustomDataPboardType ]
